@@ -1,7 +1,7 @@
 # MangaDex Downloader
 
 ```
-$ go install https://git.192k.pw/bake/mddl
+$ go install git.192k.pw/bake/mddl
 $ mddl -help
 Usage of mddl:
   -chapter string
