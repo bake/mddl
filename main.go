@@ -11,7 +11,6 @@ import (
 
 	"github.com/bakerolls/httpcache"
 	"github.com/bakerolls/httpcache/diskcache"
-
 	"github.com/bakerolls/mangadex"
 )
 
