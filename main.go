@@ -24,7 +24,10 @@ var (
 func main() {
 	flag.Parse()
 
-	cache := httpcache.New(diskcache.New("cache", diskcache.NoExpiration))
+	cache := httpcache.New(
+		diskcache.New("cache", diskcache.NoExpiration),
+		httpcache.WithVerifier(httpcache.StatusInTwoHundreds),
+	)
 	md = mangadex.New(mangadex.WithHTTPClient(cache.Client()))
 
 	var err error
@@ -35,7 +38,7 @@ func main() {
 		err = downloadChapter(*out, *cid)
 	}
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 }
 
@@ -47,7 +50,7 @@ func downloadManga(out, id string) error {
 	mOut := path.Join(out, m.Title)
 	for _, c := range cs {
 		if err := downloadChapter(mOut, c.ID.String()); err != nil {
-			return err
+			log.Println(err)
 		}
 	}
 	return nil
