@@ -24,6 +24,7 @@ func main() {
 	retries := flag.Int("retries", 5, "Retries in case a request fails")
 	cacheDir := flag.String("cache", "cache", "Diretory to store cached API responses")
 	backoff := flag.Duration("backoff", 100*time.Millisecond, "Backoff time between retries")
+	workers := flag.Int("workers", 10, "Concurrent download workers")
 	flag.Parse()
 
 	cache := httpcache.New(
@@ -47,7 +48,7 @@ func main() {
 
 	bar := pb.StartNew(len(reqs))
 	gc := grab.NewClient()
-	resch := gc.DoBatch(1, reqs...)
+	resch := gc.DoBatch(*workers, reqs...)
 	for res := range resch {
 		if err := res.Err(); err != nil {
 			log.Println(err)
