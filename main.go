@@ -3,101 +3,96 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
 	"path"
+	"time"
 
 	"github.com/bakerolls/httpcache"
 	"github.com/bakerolls/httpcache/diskcache"
 	"github.com/bakerolls/mangadex"
+	"github.com/bakerolls/retry"
+	"github.com/cavaliercoder/grab"
+	"github.com/cheggaaa/pb"
 )
 
-var (
-	md  *mangadex.Client
-	out = flag.String("out", ".", "Download directory")
-	mid = flag.String("manga", "", "Manga ID")
-	cid = flag.String("chapter", "", "Chapter ID")
-)
+var md *mangadex.Client
 
 func main() {
+	out := flag.String("out", ".", "Download directory")
+	mid := flag.String("manga", "", "Manga ID")
+	cid := flag.String("chapter", "", "Chapter ID")
+	retries := flag.Int("retries", 5, "Retries in case a request fails")
+	cacheDir := flag.String("cache", "cache", "Diretory to store cached API responses")
+	backoff := flag.Duration("backoff", 100*time.Millisecond, "Backoff time between retries")
 	flag.Parse()
 
 	cache := httpcache.New(
-		diskcache.New("cache", diskcache.NoExpiration),
+		diskcache.New(*cacheDir, diskcache.NoExpiration),
 		httpcache.WithVerifier(httpcache.StatusInTwoHundreds),
+		httpcache.WithTransport(retry.New(*retries, *backoff, nil)),
 	)
 	md = mangadex.New(mangadex.WithHTTPClient(cache.Client()))
 
+	var reqs []*grab.Request
 	var err error
 	if *mid != "" {
-		err = downloadManga(*out, *mid)
+		reqs, err = downloadManga(*out, *mid)
 	}
 	if *cid != "" {
-		err = downloadChapter(*out, *cid)
+		reqs, err = downloadChapter(*out, *cid)
 	}
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	bar := pb.StartNew(len(reqs))
+	gc := grab.NewClient()
+	resch := gc.DoBatch(1, reqs...)
+	for res := range resch {
+		if err := res.Err(); err != nil {
+			log.Println(err)
+			continue
+		}
+		bar.Increment()
+	}
 }
 
-func downloadManga(out, id string) error {
+func downloadManga(out, id string) ([]*grab.Request, error) {
 	m, cs, err := md.Manga(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	mOut := path.Join(out, m.Title)
+	out = path.Join(out, m.Title)
+
+	var reqs []*grab.Request
 	for _, c := range cs {
-		if err := downloadChapter(mOut, c.ID.String()); err != nil {
-			log.Println(err)
+		chReqs, err := downloadChapter(out, c.ID.String())
+		if err != nil {
+			return nil, err
 		}
+		reqs = append(reqs, chReqs...)
 	}
-	return nil
+	return reqs, nil
 }
 
-func downloadChapter(out, id string) error {
+func downloadChapter(out, id string) ([]*grab.Request, error) {
 	c, err := md.Chapter(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	title := fmt.Sprintf("Vol. %s Ch. %s", c.Volume, c.Chapter)
 	if c.Title != "" {
 		title = fmt.Sprintf("%s - %s", title, c.Title)
 	}
-	cOut := path.Join(out, title)
-	if err := os.MkdirAll(cOut, 0744); err != nil {
-		return err
-	}
-	fmt.Println(title)
-	for i, url := range c.Images() {
-		if err := download(i, url, cOut); err != nil {
-			return err
+
+	var reqs []*grab.Request
+	for _, image := range c.Images() {
+		dst := path.Join(out, title, path.Base(image))
+		req, err := grab.NewRequest(dst, image)
+		if err != nil {
+			return nil, err
 		}
+		reqs = append(reqs, req)
 	}
-	return nil
-}
-
-func download(i int, url, out string) error {
-	out = path.Join(out, path.Base(url))
-	if _, err := os.Stat(out); err == nil {
-		return nil
-	}
-
-	w, err := os.Create(out)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	res, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if _, err := io.Copy(w, res.Body); err != nil {
-		return err
-	}
-	return nil
+	return reqs, nil
 }
