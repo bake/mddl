@@ -5,7 +5,12 @@
 Download mangas (or chapters) from MangaDex. Provide `-manga` or `-chapter` along with the corresponding manga- or chapter-ID.
 
 ```
-$ go install github.com/bakerolls/mddl
+$ # Installation
+$ go get github.com/bakerolls/mddl
+```
+
+```
+$ # Usage
 $ mddl -help
 Usage of mddl:
   -backoff duration
