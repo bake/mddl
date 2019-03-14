@@ -30,7 +30,7 @@ func main() {
 	cache := httpcache.New(
 		diskcache.New(*cacheDir, diskcache.NoExpiration),
 		httpcache.WithVerifier(httpcache.StatusInTwoHundreds),
-		httpcache.WithTransport(retry.New(*retries, *backoff, nil)),
+		httpcache.WithTransport(retry.New(*retries, *backoff)),
 	)
 	md = mangadex.New(mangadex.WithHTTPClient(cache.Client()))
 
@@ -47,6 +47,7 @@ func main() {
 	}
 
 	bar := pb.StartNew(len(reqs))
+	defer bar.Finish()
 	gc := grab.NewClient()
 	resch := gc.DoBatch(*workers, reqs...)
 	for res := range resch {
