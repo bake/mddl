@@ -7,10 +7,10 @@ import (
 	"path"
 	"time"
 
-	"github.com/bakerolls/httpcache"
-	"github.com/bakerolls/httpcache/diskcache"
-	"github.com/bakerolls/mangadex"
-	"github.com/bakerolls/retry"
+	"github.com/bake/httpcache"
+	"github.com/bake/httpcache/diskcache"
+	"github.com/bake/mangadex"
+	"github.com/bake/retry"
 	"github.com/cavaliercoder/grab"
 	"github.com/cheggaaa/pb"
 )

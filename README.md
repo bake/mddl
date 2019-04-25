@@ -1,13 +1,13 @@
 # MangaDex Downloader
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/bakerolls/mddl)](https://goreportcard.com/report/github.com/bakerolls/mddl)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bake/mddl)](https://goreportcard.com/report/github.com/bake/mddl)
 
 Download mangas (or chapters) from MangaDex. Provide `-manga` or `-chapter` along with the corresponding manga- or chapter-ID.
 
 ## Installation
 
 ```
-$ go get github.com/bakerolls/mddl
+$ go get github.com/bake/mddl
 ```
 
 ## Usage
